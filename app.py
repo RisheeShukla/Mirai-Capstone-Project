@@ -9,7 +9,19 @@ import io
 from datetime import datetime, timedelta
 import google.generativeai as genai
 from gtts import gTTS
+from dotenv import load_dotenv
 
+# ==========================================
+# ENVIRONMENT & API CONFIGURATION
+# ==========================================
+load_dotenv()
+api_key = os.getenv("GEMINI_API_KEY")
+if api_key:
+    genai.configure(api_key=api_key)
+
+# ==========================================
+# PAGE CONFIGURATION & STYLING
+# ==========================================
 st.set_page_config(
     page_title="RoastMySpend — Brutal AI Expense Auditor",
     page_icon="🔥",
@@ -39,15 +51,19 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
+# ==========================================
+# SESSION STATE INITIALIZATION
+# ==========================================
 if "expense_df" not in st.session_state:
     st.session_state.expense_df = None
 if "roast_result" not in st.session_state:
     st.session_state.roast_result = None
-if "api_key_configured" not in st.session_state:
-    st.session_state.api_key_configured = False
 if "audio_bytes" not in st.session_state:
     st.session_state.audio_bytes = None
 
+# ==========================================
+# HELPER FUNCTIONS & DATA PIPELINE
+# ==========================================
 def generate_sample_data():
     categories = {
         "Dining & Delivery": ["Swiggy", "Zomato", "Starbucks", "Fine Dine Sushi"],
@@ -94,16 +110,18 @@ def generate_audio_summary(roast_text):
     audio_buffer.seek(0)
     return audio_buffer
 
-
+# ==========================================
+# SIDEBAR SETUP & CONTROLS
+# ==========================================
 with st.sidebar:
     st.title("🔥 Roast Settings")
     st.caption("Configure AI Auditor Personality & Telemetry")
     
-    api_key_input = st.text_input("Enter Gemini API Key", type="password", help="Grab your key from Google AI Studio")
-    if api_key_input:
-        genai.configure(api_key=api_key_input)
-        st.session_state.api_key_configured = True
-        st.success("API Key Active")
+    # Status indicator instead of input
+    if api_key:
+        st.success("✅ API Key Loaded from Environment")
+    else:
+        st.warning("⚠️ No API Key found in .env. Running in Mock Mode.")
     
     st.divider()
     
@@ -126,12 +144,17 @@ with st.sidebar:
     
     monthly_income_target = st.number_input("Your Net Monthly Income ($ / ₹)", min_value=1000, value=65000, step=1000)
 
+# ==========================================
+# MAIN DASHBOARD INTERFACE
+# ==========================================
 st.title("💸 The Expense Roaster & Recovery Engine")
 st.markdown("Upload your mock/real expenses, review automated discretionary leak audits, and let Gemini brutally restructure your personal cash flow.")
 
 tab_upload, tab_analytics, tab_roast = st.tabs(["1. Data Ingestion & Live Editor", "2. Financial Telemetry & Leak Visuals", "3. AI Roast & Recovery Plan"])
 
-
+# ----------------------------------------------------
+# TAB 1: DATA INGESTION
+# ----------------------------------------------------
 with tab_upload:
     col_u1, col_u2 = st.columns([2, 1])
     
@@ -165,7 +188,9 @@ with tab_upload:
         )
         st.session_state.expense_df = edited_df
 
-
+# ----------------------------------------------------
+# TAB 2: FINANCIAL TELEMETRY
+# ----------------------------------------------------
 with tab_analytics:
     if st.session_state.expense_df is None:
         st.info("Please upload a CSV or load the sample dataset in Tab 1 first.")
@@ -218,6 +243,9 @@ with tab_analytics:
             fig_line.update_layout(margin=dict(t=20, b=20, l=20, r=20))
             st.plotly_chart(fig_line, use_container_width=True)
 
+# ----------------------------------------------------
+# TAB 3: AI ROAST & RECOVERY PLAN
+# ----------------------------------------------------
 with tab_roast:
     if st.session_state.expense_df is None:
         st.warning("Upload transaction data first!")
@@ -261,7 +289,7 @@ with tab_roast:
             """
             
             with st.spinner("AI Auditor is dissecting your poor life choices..."):
-                if not st.session_state.api_key_configured and not os.getenv("GEMINI_API_KEY"):
+                if not api_key:
                     # Mock response for testing without API key
                     st.session_state.roast_result = f"""
                     ### 🚨 AUDIT REPORT: FINANCIAL CRIME SCENE
@@ -269,7 +297,6 @@ with tab_roast:
                     
                     > *"You spent more on random food deliveries and impulse gadgets than your future self has saved for retirement."*
                     
-                  
                     Look at this ledger. You burned **{disc_df['Amount'].sum():,.2f}** on pure impulse gratification. 
                     - Your top money sink includes **{list(top_leaks.keys())[0] if top_leaks else 'Impulse Buys'}**, costing you **{list(top_leaks.values())[0] if top_leaks else 0:,.2f}**.
                     - You told yourself: *"{user_excuse if user_excuse else 'Treat yourself'}."* The only thing you treated was your delivery driver to guaranteed employment!
@@ -300,17 +327,17 @@ with tab_roast:
                         response = model.generate_content(f"{prompt_context}\nGenerate the complete roast and recovery matrix.")
                         st.session_state.roast_result = response.text
                         
-                       
+                        # 2. Short Audio Prompt
                         audio_prompt = f"Summarize this financial roast in 1 short, brutal sentence to be spoken out loud: {response.text}"
                         audio_response = model.generate_content(audio_prompt)
                         
-                      
+                        # 3. Generate TTS
                         st.session_state.audio_bytes = generate_audio_summary(audio_response.text)
                         
                     except Exception as err:
                         st.error(f"Gemini API Error: {err}")
 
-    
+        # Render Roast Results and Audio
         if st.session_state.roast_result:
             if st.session_state.audio_bytes:
                 st.markdown("### 🎧 Listen to your Financial Verdict")
