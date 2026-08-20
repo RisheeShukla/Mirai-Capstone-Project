@@ -218,9 +218,6 @@ with tab_analytics:
             fig_line.update_layout(margin=dict(t=20, b=20, l=20, r=20))
             st.plotly_chart(fig_line, use_container_width=True)
 
-# ----------------------------------------------------
-# TAB 3: AI ROAST & RECOVERY PLAN
-# ----------------------------------------------------
 with tab_roast:
     if st.session_state.expense_df is None:
         st.warning("Upload transaction data first!")
@@ -296,7 +293,7 @@ with tab_roast:
                 else:
                     try:
                         model = genai.GenerativeModel(
-                            model_name="gemini-1.5-flash",
+                            model_name="gemini-3.7-flash",
                             system_instruction=system_instruction
                         )
                         # 1. Full Text Roast
